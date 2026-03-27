@@ -1,0 +1,351 @@
+{
+  "competitors": {
+    "name": "Secure Routing and WAN",
+    "description": "Competitor tracking for SD-WAN, SASE, SSE, Secure WAN, Enterprise Routing",
+    "priority_themes": ["security", "enterprise", "simplicity", "ai"]
+  },
+  "tracking": {
+    "lookback_hours": 24,
+    "max_articles_per_competitor": 10,
+    "max_final_brief_bullets": 8,
+    "dedupe": {
+      "by_url": true,
+      "by_title_similarity": true,
+      "title_similarity_threshold": 0.85
+    }
+  },
+  "competitors": {
+    "tier_1_direct": [
+      {
+        "name": "Palo Alto Networks",
+        "aliases": ["Palo Alto", "Prisma SASE", "Prisma Access"],
+        "category": "security_first_sase",
+        "official_domains": ["paloaltonetworks.com"],
+        "priority": 1
+      },
+      {
+        "name": "Zscaler",
+        "aliases": ["Zscaler", "ZIA", "ZPA"],
+        "category": "security_first_sase",
+        "official_domains": ["zscaler.com"],
+        "priority": 1
+      },
+      {
+        "name": "Netskope",
+        "aliases": ["Netskope"],
+        "category": "security_first_sase",
+        "official_domains": ["netskope.com"],
+        "priority": 1
+      },
+      {
+        "name": "Fortinet",
+        "aliases": ["Fortinet", "FortiSASE", "FortiGate", "FortiWAN"],
+        "category": "security_first_sase",
+        "official_domains": ["fortinet.com"],
+        "priority": 1
+      },
+      {
+        "name": "Check Point",
+        "aliases": ["Check Point", "Check Point Software", "Harmony SASE"],
+        "category": "security_first_sase",
+        "official_domains": ["checkpoint.com"],
+        "priority": 1
+      },
+      {
+        "name": "VMware",
+        "aliases": ["VMware", "VMware SD-WAN", "VeloCloud"],
+        "category": "networking_first_sase",
+        "official_domains": ["vmware.com", "velocloud.com"],
+        "priority": 1
+      },
+      {
+        "name": "Juniper Networks",
+        "aliases": ["Juniper", "Juniper Mist", "Mist AI", "Juniper Secure Edge"],
+        "category": "networking_first_sase",
+        "official_domains": ["juniper.net"],
+        "priority": 1
+      },
+      {
+        "name": "HPE Aruba Networking",
+        "aliases": ["Aruba", "HPE Aruba", "Aruba Networking"],
+        "category": "networking_first_sase",
+        "official_domains": ["arubanetworks.com", "hpe.com"],
+        "priority": 1
+      },
+      {
+        "name": "Arista Networks",
+        "aliases": ["Arista"],
+        "category": "networking_first_adjacent",
+        "official_domains": ["arista.com"],
+        "priority": 1
+      },
+      {
+        "name": "Extreme Networks",
+        "aliases": ["Extreme", "Extreme Networks"],
+        "category": "networking_first_adjacent",
+        "official_domains": ["extremenetworks.com"],
+        "priority": 1
+      },
+      {
+        "name": "Cato Networks",
+        "aliases": ["Cato", "Cato Networks"],
+        "category": "cloud_native_sase",
+        "official_domains": ["catonetworks.com"],
+        "priority": 1
+      },
+      {
+        "name": "Cloudflare",
+        "aliases": ["Cloudflare", "Cloudflare Zero Trust", "Cloudflare One"],
+        "category": "cloud_native_sase",
+        "official_domains": ["cloudflare.com"],
+        "priority": 1
+      },
+      {
+        "name": "Akamai",
+        "aliases": ["Akamai", "Enterprise Application Access", "EAA"],
+        "category": "cloud_native_sase",
+        "official_domains": ["akamai.com"],
+        "priority": 1
+      },
+      {
+        "name": "Twingate",
+        "aliases": ["Twingate"],
+        "category": "cloud_native_zero_trust",
+        "official_domains": ["twingate.com"],
+        "priority": 1
+      }
+    ],
+    "tier_2_adjacent": [
+      {
+        "name": "Versa Networks",
+        "aliases": ["Versa", "Versa Networks"],
+        "category": "sase_sdwan",
+        "official_domains": ["versa-networks.com"],
+        "priority": 2
+      },
+      {
+        "name": "Aryaka",
+        "aliases": ["Aryaka"],
+        "category": "managed_sase_wan",
+        "official_domains": ["aryaka.com"],
+        "priority": 2
+      },
+      {
+        "name": "Riverbed",
+        "aliases": ["Riverbed"],
+        "category": "wan_performance",
+        "official_domains": ["riverbed.com"],
+        "priority": 2
+      },
+      {
+        "name": "Cradlepoint",
+        "aliases": ["Cradlepoint"],
+        "category": "wireless_wan",
+        "official_domains": ["cradlepoint.com"],
+        "priority": 2
+      },
+      {
+        "name": "Bigleaf Networks",
+        "aliases": ["Bigleaf", "Bigleaf Networks"],
+        "category": "wan_optimization",
+        "official_domains": ["bigleaf.net"],
+        "priority": 2
+      },
+      {
+        "name": "Forcepoint",
+        "aliases": ["Forcepoint"],
+        "category": "security_adjacent",
+        "official_domains": ["forcepoint.com"],
+        "priority": 2
+      },
+      {
+        "name": "iboss",
+        "aliases": ["iboss"],
+        "category": "security_adjacent",
+        "official_domains": ["iboss.com"],
+        "priority": 2
+      },
+      {
+        "name": "Lookout",
+        "aliases": ["Lookout"],
+        "category": "security_adjacent",
+        "official_domains": ["lookout.com"],
+        "priority": 2
+      },
+      {
+        "name": "Broadcom",
+        "aliases": ["Broadcom", "Symantec Enterprise", "Symantec"],
+        "category": "security_adjacent",
+        "official_domains": ["broadcom.com"],
+        "priority": 2
+      }
+    ]
+  },
+  "themes": {
+    "security": {
+      "keywords": [
+        "security",
+        "breach",
+        "vulnerability",
+        "ransomware",
+        "data loss prevention",
+        "DLP",
+        "threat detection",
+        "threat intelligence",
+        "zero trust",
+        "secure web gateway",
+        "SWG",
+        "CASB",
+        "firewall",
+        "FWaaS",
+        "encryption",
+        "compliance",
+        "incident response"
+      ]
+    },
+    "enterprise": {
+      "keywords": [
+        "enterprise",
+        "large enterprise",
+        "Fortune 500",
+        "global enterprise",
+        "multi-cloud",
+        "hybrid workforce",
+        "compliance",
+        "regulated industry",
+        "financial services",
+        "healthcare",
+        "government",
+        "branch",
+        "campus",
+        "distributed workforce",
+        "customer win",
+        "deployment"
+      ]
+    },
+    "simplicity": {
+      "keywords": [
+        "simplify",
+        "simplicity",
+        "platform consolidation",
+        "consolidation",
+        "single vendor",
+        "single platform",
+        "unified console",
+        "reduced complexity",
+        "centralized management",
+        "ease of deployment",
+        "automation",
+        "operational efficiency",
+        "streamlined operations",
+        "policy management"
+      ]
+    },
+    "ai": {
+      "keywords": [
+        "AI",
+        "artificial intelligence",
+        "AI-powered",
+        "AIOps",
+        "machine learning",
+        "ML",
+        "autonomous network",
+        "AI security",
+        "AI threat detection",
+        "predictive routing",
+        "assistant",
+        "copilot",
+        "generative AI",
+        "GenAI"
+      ]
+    }
+  },
+  "core_domain_keywords": [
+    "SASE",
+    "secure access service edge",
+    "SSE",
+    "security service edge",
+    "SD-WAN",
+    "secure WAN",
+    "enterprise routing",
+    "WAN edge",
+    "ZTNA",
+    "zero trust network access",
+    "CASB",
+    "SWG",
+    "FWaaS",
+    "cloud security",
+    "network security",
+    "secure connectivity",
+    "branch networking",
+    "routing",
+    "WAN"
+  ],
+  "event_categories": [
+    "product_launch",
+    "feature_update",
+    "pricing",
+    "partnership",
+    "acquisition",
+    "executive_change",
+    "hiring_signal",
+    "customer_win",
+    "security_event",
+    "compliance",
+    "analyst_news_mention",
+    "research_report",
+    "other"
+  ],
+  "search_queries": {
+    "daily_competitor_news": "(\"Zscaler\" OR \"Palo Alto Prisma\" OR \"Netskope\" OR \"Fortinet\" OR \"Check Point\" OR \"VMware SD-WAN\" OR \"VeloCloud\" OR \"Juniper Mist\" OR \"Aruba\" OR \"Cato Networks\" OR \"Cloudflare Zero Trust\" OR \"Akamai\" OR \"Versa Networks\") AND (SASE OR SD-WAN OR \"secure WAN\" OR ZTNA OR SSE) AND (launch OR partnership OR pricing OR acquisition OR update OR enterprise OR AI)",
+    "security_focused": "(\"Zscaler\" OR \"Palo Alto\" OR \"Fortinet\" OR \"Netskope\" OR \"Check Point\") AND (security OR breach OR vulnerability OR \"zero trust\" OR DLP OR CASB OR SWG) AND (enterprise OR cloud OR SASE)",
+    "enterprise_focused": "(\"Zscaler\" OR \"Palo Alto\" OR \"Netskope\" OR \"Fortinet\" OR \"Cato Networks\" OR \"Cloudflare\") AND (enterprise OR \"Fortune 500\" OR \"large customer\" OR compliance OR regulated) AND (SASE OR SD-WAN OR SSE)",
+    "simplicity_focused": "(\"single vendor\" OR \"platform consolidation\" OR \"unified console\" OR \"reduced complexity\" OR automation OR \"centralized management\") AND (SASE OR SD-WAN OR SSE) AND (\"Palo Alto\" OR \"Zscaler\" OR \"Netskope\" OR \"Fortinet\" OR \"Cloudflare\" OR \"Cato\")",
+    "ai_focused": "(\"SASE\" OR \"SD-WAN\" OR \"secure access\" OR \"secure WAN\") AND (AI OR \"AI-powered\" OR AIOps OR \"machine learning\" OR \"predictive routing\" OR \"AI security\") AND (\"Zscaler\" OR \"Palo Alto\" OR \"Netskope\" OR \"Fortinet\" OR \"Juniper\" OR \"Cloudflare\" OR \"Cato\")"
+  },
+  "scoring": {
+    "importance_weights": {
+      "product_launch": 5,
+      "pricing": 4,
+      "partnership": 4,
+      "acquisition": 5,
+      "executive_change": 3,
+      "hiring_signal": 2,
+      "customer_win": 4,
+      "security_event": 5,
+      "compliance": 3,
+      "analyst_news_mention": 2,
+      "research_report": 2,
+      "feature_update": 3,
+      "other": 1
+    },
+    "theme_weights": {
+      "security": 5,
+      "enterprise": 4,
+      "simplicity": 4,
+      "ai": 5
+    }
+  },
+  "filters": {
+    "exclude_keywords": [
+      "webinar",
+      "on-demand webinar",
+      "event recap",
+      "podcast",
+      "sponsored content",
+      "advertisement",
+      "job opening",
+      "careers",
+      "internship",
+      "minor bug fix",
+      "community post"
+    ]
+  },
+  "output": {
+    "brief_format": "markdown",
+    "include_source_links": true,
+    "include_why_it_matters": true,
+    "group_by_competitor": true,
+    "max_bullets_per_competitor": 2
+  }
+}
