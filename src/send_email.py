@@ -32,7 +32,7 @@ def build_message(brief_text, smtp_username, email_to):
     today = datetime.now().strftime("%Y-%m-%d")
 
     message = EmailMessage()
-    message["Subject"] = f"Competitor Morning Brief - {today}"
+    message["Subject"] = f"Competitor Brief for Today - {today}"
     message["From"] = smtp_username
     message["To"] = email_to
 
