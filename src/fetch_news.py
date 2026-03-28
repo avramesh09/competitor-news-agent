@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "competitors.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_articles.json"
+LAST_SUCCESSFUL_PATH = BASE_DIR / "data" / "last_successful_articles.json"
 NEWS_API_URL = "https://newsapi.org/v2/everything"
 
 
@@ -167,6 +168,15 @@ def save_results(articles):
         json.dump(articles, file, indent=2)
 
 
+def save_last_successful_results(articles):
+    if not articles:
+        return
+
+    LAST_SUCCESSFUL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with LAST_SUCCESSFUL_PATH.open("w", encoding="utf-8") as file:
+        json.dump(articles, file, indent=2)
+
+
 def main():
     load_dotenv()
     api_key = os.getenv("NEWS_API_KEY")
@@ -218,6 +228,7 @@ def main():
         all_articles.extend(articles)
 
     save_results(all_articles)
+    save_last_successful_results(all_articles)
     print(f"Used {requests_used} NewsAPI requests")
     print(f"Saved {len(all_articles)} total articles to {OUTPUT_PATH}")
 

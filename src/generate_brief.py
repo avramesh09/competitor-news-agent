@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 FRESH_INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 LATEST_INPUT_PATH = BASE_DIR / "output" / "latest_articles.json"
+LAST_SUCCESSFUL_PATH = BASE_DIR / "data" / "last_successful_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_brief.md"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 MAX_BULLETS = 8
@@ -36,6 +37,14 @@ def load_latest_articles():
         return []
 
     with LATEST_INPUT_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_last_successful_articles():
+    if not LAST_SUCCESSFUL_PATH.exists():
+        return []
+
+    with LAST_SUCCESSFUL_PATH.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -162,7 +171,7 @@ def set_fallback_status(status, source_message, articles):
         )
 
 
-def choose_brief_articles(filtered_articles, fresh_articles, latest_articles, status):
+def choose_brief_articles(filtered_articles, fresh_articles, latest_articles, last_successful_articles, status):
     if filtered_articles:
         return filtered_articles, "filtered"
 
@@ -181,6 +190,14 @@ def choose_brief_articles(filtered_articles, fresh_articles, latest_articles, st
             latest_articles,
         )
         return normalize_fresh_articles(latest_articles), "latest"
+
+    if last_successful_articles:
+        set_fallback_status(
+            status,
+            "This run fetched no usable articles, so this brief was built from the last successful fetched article snapshot.",
+            last_successful_articles,
+        )
+        return normalize_fresh_articles(last_successful_articles), "last_successful"
 
     return [], "none"
 
@@ -273,10 +290,12 @@ def main():
     status = load_filter_status()
     fresh_articles = load_fresh_articles()
     latest_articles = load_latest_articles()
+    last_successful_articles = load_last_successful_articles()
     articles, source_used = choose_brief_articles(
         filtered_articles,
         fresh_articles,
         latest_articles,
+        last_successful_articles,
         status,
     )
 
@@ -288,7 +307,8 @@ def main():
         "Article counts for brief:"
         f" filtered={len(filtered_articles)},"
         f" fresh={len(fresh_articles)},"
-        f" latest={len(latest_articles)}"
+        f" latest={len(latest_articles)},"
+        f" last_successful={len(last_successful_articles)}"
     )
     print(f"Using article source: {source_used}")
     print(f"Selected up to {selected_count} items for the brief")
