@@ -94,6 +94,29 @@ def format_article_line(article):
     return line
 
 
+def build_updates_table(articles):
+    lines = [
+        "| Competitor | Update | Importance | Link |",
+        "| --- | --- | --- | --- |",
+    ]
+
+    for article in articles:
+        competitor = article.get("competitor", "Unknown competitor").replace("|", "/")
+        title = article.get("title", "Untitled article").replace("|", "/")
+        summary = article.get("summary", "").replace("|", "/").strip()
+        importance = str(article.get("importance", 1))
+        url = article.get("url", "").strip() or "-"
+
+        update_text = title
+        if summary:
+            update_text += f" - {summary}"
+
+        lines.append(f"| {competitor} | {update_text} | {importance} | {url} |")
+
+    lines.append("")
+    return lines
+
+
 def normalize_fresh_articles(fresh_articles):
     normalized = []
 
@@ -223,11 +246,14 @@ def build_brief(articles, status):
         lines.append("No meaningful competitor news was found today.")
         return "\n".join(lines) + "\n"
 
+    lines.append("## Daily Updates")
+    lines.extend(build_updates_table(top_articles))
+
+    lines.append("## By Competitor")
     for competitor in sorted(grouped_articles.keys()):
-        lines.append(f"## {competitor}")
-        for article in grouped_articles[competitor]:
-            lines.append(format_article_line(article))
-        lines.append("")
+        titles = "; ".join(article.get("title", "Untitled article") for article in grouped_articles[competitor])
+        lines.append(f"- {competitor}: {titles}")
+    lines.append("")
 
     lines.append("## Why this matters")
     lines.append(build_why_this_matters(top_articles))
