@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = BASE_DIR / "config" / "competitors.json"
 INPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 FRESH_INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 LATEST_INPUT_PATH = BASE_DIR / "output" / "latest_articles.json"
@@ -13,6 +14,26 @@ LAST_SUCCESSFUL_PATH = BASE_DIR / "data" / "last_successful_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_brief.md"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 MAX_BULLETS = 8
+
+
+def load_config():
+    with CONFIG_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def extract_competitors(config):
+    competitors = config.get("competitors", [])
+
+    if isinstance(competitors, list):
+        return competitors
+
+    if isinstance(competitors, dict):
+        all_competitors = []
+        for group_name in ["tier_1_direct", "tier_2_adjacent"]:
+            all_competitors.extend(competitors.get(group_name, []))
+        return all_competitors
+
+    return []
 
 
 def load_articles():
@@ -121,6 +142,46 @@ def build_updates_table(articles):
             update_text += f" - {summary}"
 
         lines.append(f"| {competitor} | {update_text} | {importance} | {url} |")
+
+    lines.append("")
+    return lines
+
+
+def build_competitor_table(competitors, articles):
+    grouped_articles = group_by_competitor(articles)
+    lines = [
+        "| Competitor | Update | Importance | Link |",
+        "| --- | --- | --- | --- |",
+    ]
+
+    for competitor in competitors:
+        competitor_name = competitor.get("name", "Unknown competitor")
+        competitor_articles = sort_articles(grouped_articles.get(competitor_name, []))
+
+        if not competitor_articles:
+            lines.append(f"| {competitor_name} | No Update | - | - |")
+            continue
+
+        top_articles = competitor_articles[:2]
+        updates = []
+        links = []
+
+        for article in top_articles:
+            title = article.get("title", "Untitled article").replace("|", "/")
+            summary = article.get("summary", "").replace("|", "/").strip()
+            text = title
+            if summary:
+                text += f" - {summary}"
+            updates.append(text)
+
+            url = article.get("url", "").strip()
+            if url:
+                links.append(url)
+
+        best_importance = max(int(article.get("importance", 1)) for article in top_articles)
+        link_text = " ".join(links) if links else "-"
+        update_text = " ; ".join(updates) if updates else "No Update"
+        lines.append(f"| {competitor_name} | {update_text} | {best_importance} | {link_text} |")
 
     lines.append("")
     return lines
@@ -244,10 +305,9 @@ def build_quota_warning(status):
     ]
 
 
-def build_brief(articles, status):
+def build_brief(competitors, articles, status):
     today = datetime.now().strftime("%Y-%m-%d")
     top_articles = select_top_articles(articles)
-    grouped_articles = group_by_competitor(top_articles)
 
     lines = [
         f"# Competitor Morning Brief - {today}",
@@ -256,24 +316,17 @@ def build_brief(articles, status):
 
     lines.extend(build_quota_warning(status))
 
-    if not top_articles:
-        lines.append("No relevant competitor updates found in the last 24 hours.")
-        lines.append("")
-        lines.append("## Why this matters")
-        lines.append("No meaningful competitor news was found today.")
-        return "\n".join(lines) + "\n"
-
     lines.append("## Daily Updates")
-    lines.extend(build_updates_table(top_articles))
-
-    lines.append("## By Competitor")
-    for competitor in sorted(grouped_articles.keys()):
-        titles = "; ".join(article.get("title", "Untitled article") for article in grouped_articles[competitor])
-        lines.append(f"- {competitor}: {titles}")
-    lines.append("")
+    lines.extend(build_competitor_table(competitors, articles))
 
     lines.append("## Why this matters")
-    lines.append(build_why_this_matters(top_articles))
+    if top_articles:
+        lines.append(build_why_this_matters(top_articles))
+    else:
+        lines.append(
+            "No important competitor updates were available from the last 24-hour fetch window, "
+            "so this table shows No Update for competitors without usable articles."
+        )
     lines.append("")
 
     return "\n".join(lines)
@@ -286,6 +339,8 @@ def save_brief(brief_text):
 
 
 def main():
+    config = load_config()
+    competitors = extract_competitors(config)
     filtered_articles = load_articles()
     status = load_filter_status()
     fresh_articles = load_fresh_articles()
@@ -299,10 +354,10 @@ def main():
         status,
     )
 
-    brief_text = build_brief(articles, status)
+    brief_text = build_brief(competitors, articles, status)
     save_brief(brief_text)
 
-    selected_count = min(len(articles), MAX_BULLETS)
+    selected_count = len(competitors)
     print(
         "Article counts for brief:"
         f" filtered={len(filtered_articles)},"
@@ -311,7 +366,7 @@ def main():
         f" last_successful={len(last_successful_articles)}"
     )
     print(f"Using article source: {source_used}")
-    print(f"Selected up to {selected_count} items for the brief")
+    print(f"Built table rows for {selected_count} competitors")
     print(f"Saved brief to {OUTPUT_PATH}")
 
 
