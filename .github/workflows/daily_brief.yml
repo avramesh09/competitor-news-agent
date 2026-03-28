@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "0 8 * * *"
 
+concurrency:
+  group: daily-competitor-brief
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -15,6 +19,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,8 +47,27 @@ jobs:
 
       - name: Save updated seen-links database
         run: |
+          if [ ! -f data/seen_articles.db ]; then
+            echo "No seen-links database found. Skipping save step."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          cp data/seen_articles.db /tmp/seen_articles.db
+          git pull --rebase origin main || true
+          cp /tmp/seen_articles.db data/seen_articles.db
+
           git add data/seen_articles.db
-          git diff --cached --quiet || git commit -m "Update seen articles database"
-          git push
+          if git diff --cached --quiet; then
+            echo "No seen-links database changes to save."
+            exit 0
+          fi
+
+          git commit -m "Update seen articles database"
+
+          if ! git push; then
+            echo "Warning: could not push updated seen-links database. The brief was still sent successfully."
+            exit 0
+          fi
