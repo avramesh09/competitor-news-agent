@@ -8,6 +8,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_brief.md"
+STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 MAX_BULLETS = 8
 
 
@@ -17,6 +18,18 @@ def load_articles():
         sys.exit(1)
 
     with INPUT_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_filter_status():
+    if not STATUS_PATH.exists():
+        return {
+            "openai_quota_exhausted": False,
+            "fallback_competitors": [],
+            "message": "",
+        }
+
+    with STATUS_PATH.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -79,7 +92,22 @@ def build_why_this_matters(articles):
     )
 
 
-def build_brief(articles):
+def build_quota_warning(status):
+    if not status.get("openai_quota_exhausted"):
+        return []
+
+    competitors = status.get("fallback_competitors", [])
+    competitor_text = ", ".join(competitors) if competitors else "Unknown competitors"
+
+    return [
+        "## Quota Warning",
+        status.get("message", "OpenAI quota was exhausted during this run."),
+        f"Affected competitors: {competitor_text}",
+        "",
+    ]
+
+
+def build_brief(articles, status):
     today = datetime.now().strftime("%Y-%m-%d")
     top_articles = select_top_articles(articles)
     grouped_articles = group_by_competitor(top_articles)
@@ -88,6 +116,8 @@ def build_brief(articles):
         f"# Competitor Morning Brief - {today}",
         "",
     ]
+
+    lines.extend(build_quota_warning(status))
 
     if not top_articles:
         lines.append("No relevant competitor updates found in the last 24 hours.")
@@ -117,7 +147,8 @@ def save_brief(brief_text):
 
 def main():
     articles = load_articles()
-    brief_text = build_brief(articles)
+    status = load_filter_status()
+    brief_text = build_brief(articles, status)
     save_brief(brief_text)
 
     selected_count = min(len(articles), MAX_BULLETS)

@@ -10,6 +10,7 @@ from openai import OpenAI
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
+STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 
 CATEGORIES = [
     "product_launch",
@@ -33,6 +34,12 @@ def load_articles():
 
     with INPUT_PATH.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def save_status(status):
+    STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with STATUS_PATH.open("w", encoding="utf-8") as file:
+        json.dump(status, file, indent=2)
 
 
 def split_into_batches(items, batch_size):
@@ -104,6 +111,16 @@ def get_model_name():
     return "gpt-5-mini"
 
 
+def is_quota_error(error):
+    error_text = str(error).lower()
+    return (
+        "insufficient_quota" in error_text
+        or "exceeded your current quota" in error_text
+        or "rate limit" in error_text
+        or "error code: 429" in error_text
+    )
+
+
 def call_openai(client, model, batch):
     try:
         response = client.responses.create(
@@ -124,6 +141,8 @@ def call_openai(client, model, batch):
             text={"format": {"type": "json_object"}},
         )
     except Exception as error:
+        if is_quota_error(error):
+            raise
         print(f"OpenAI request failed: {error}")
         sys.exit(1)
 
@@ -178,6 +197,39 @@ def normalize_kept_articles(batch, response_data):
     return normalized
 
 
+def build_fallback_summary(article):
+    title = article.get("title", "").strip()
+    competitor = article.get("competitor", "This competitor")
+
+    if title:
+        return f"Fallback summary because OpenAI quota was exhausted. Headline: {title}"
+
+    return f"Fallback summary because OpenAI quota was exhausted for {competitor}."
+
+
+def fallback_filter_batch(batch):
+    fallback_articles = []
+
+    for article in batch:
+        source_type = article.get("source_type", "")
+        category = "official_update" if source_type == "official" else "other"
+        importance = 3 if source_type == "official" else 2
+
+        fallback_articles.append(
+            {
+                "competitor": article.get("competitor", ""),
+                "title": article.get("title", ""),
+                "url": article.get("url", ""),
+                "date": article.get("date", ""),
+                "category": category,
+                "summary": build_fallback_summary(article),
+                "importance": importance,
+            }
+        )
+
+    return fallback_articles
+
+
 def save_articles(articles):
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_PATH.open("w", encoding="utf-8") as file:
@@ -190,6 +242,13 @@ def main():
 
     if not articles:
         save_articles([])
+        save_status(
+            {
+                "openai_quota_exhausted": False,
+                "fallback_competitors": [],
+                "message": "",
+            }
+        )
         print("Loaded 0 fresh articles")
         print(f"Saved 0 filtered articles to {OUTPUT_PATH}")
         return
@@ -199,13 +258,46 @@ def main():
     batches = split_into_batches(articles, batch_size=8)
 
     filtered_articles = []
+    quota_exhausted = False
+    fallback_competitors = set()
 
     for index, batch in enumerate(batches, start=1):
         print(f"Filtering batch {index} of {len(batches)}")
-        response_data = call_openai(client, model, batch)
-        filtered_articles.extend(normalize_kept_articles(batch, response_data))
+        if quota_exhausted:
+            filtered_articles.extend(fallback_filter_batch(batch))
+            fallback_competitors.update(
+                article.get("competitor", "Unknown competitor") for article in batch
+            )
+            continue
+
+        try:
+            response_data = call_openai(client, model, batch)
+            filtered_articles.extend(normalize_kept_articles(batch, response_data))
+        except Exception as error:
+            if not is_quota_error(error):
+                print(f"OpenAI request failed: {error}")
+                sys.exit(1)
+
+            quota_exhausted = True
+            fallback_competitors.update(
+                article.get("competitor", "Unknown competitor") for article in batch
+            )
+            filtered_articles.extend(fallback_filter_batch(batch))
+            print("OpenAI quota was exhausted. Continuing with fallback summaries.")
 
     save_articles(filtered_articles)
+    save_status(
+        {
+            "openai_quota_exhausted": quota_exhausted,
+            "fallback_competitors": sorted(name for name in fallback_competitors if name),
+            "message": (
+                "OpenAI quota was exhausted during this run. "
+                "The brief below includes fallback headline-based summaries for the affected competitors."
+                if quota_exhausted
+                else ""
+            ),
+        }
+    )
     print(f"Loaded {len(articles)} fresh articles")
     print(f"Kept {len(filtered_articles)} relevant articles")
     print(f"Saved filtered articles to {OUTPUT_PATH}")
