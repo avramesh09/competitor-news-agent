@@ -7,6 +7,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
+FRESH_INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_brief.md"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 MAX_BULLETS = 8
@@ -21,11 +22,20 @@ def load_articles():
         return json.load(file)
 
 
+def load_fresh_articles():
+    if not FRESH_INPUT_PATH.exists():
+        return []
+
+    with FRESH_INPUT_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
 def load_filter_status():
     if not STATUS_PATH.exists():
         return {
             "openai_quota_exhausted": False,
             "fallback_used": False,
+            "used_raw_articles_fallback": False,
             "fallback_competitors": [],
             "message": "",
         }
@@ -75,6 +85,37 @@ def format_article_line(article):
     return line
 
 
+def normalize_fresh_articles(fresh_articles):
+    normalized = []
+
+    for article in fresh_articles:
+        source_type = article.get("source_type", "")
+        category = "official_update" if source_type == "official" else "other"
+        importance = 3 if source_type == "official" else 2
+        source = article.get("source", "").strip()
+        title = article.get("title", "").strip()
+
+        summary = "Fallback summary from fetched article"
+        if source:
+            summary += f" via {source}"
+        if title:
+            summary += f". Headline: {title}"
+
+        normalized.append(
+            {
+                "competitor": article.get("competitor", ""),
+                "title": title,
+                "url": article.get("url", ""),
+                "date": article.get("date", ""),
+                "category": category,
+                "summary": summary,
+                "importance": importance,
+            }
+        )
+
+    return normalized
+
+
 def build_why_this_matters(articles):
     if not articles:
         return "No important competitor updates were found in the last 24 hours."
@@ -94,15 +135,24 @@ def build_why_this_matters(articles):
 
 
 def build_quota_warning(status):
-    if not status.get("openai_quota_exhausted") and not status.get("fallback_used"):
+    if (
+        not status.get("openai_quota_exhausted")
+        and not status.get("fallback_used")
+        and not status.get("used_raw_articles_fallback")
+    ):
         return []
 
     competitors = status.get("fallback_competitors", [])
     competitor_text = ", ".join(competitors) if competitors else "Unknown competitors"
+    message = status.get("message", "").strip()
+    if not message and status.get("used_raw_articles_fallback"):
+        message = (
+            "Filtered articles were empty, so this brief was built directly from fetched articles."
+        )
 
     return [
         "## Quota Warning",
-        status.get("message", "OpenAI quota was exhausted during this run."),
+        message or "Fallback content was used for this brief.",
         f"Affected competitors: {competitor_text}",
         "",
     ]
@@ -149,6 +199,24 @@ def save_brief(brief_text):
 def main():
     articles = load_articles()
     status = load_filter_status()
+    fresh_articles = load_fresh_articles()
+
+    if not articles and fresh_articles:
+        articles = normalize_fresh_articles(fresh_articles)
+        status["used_raw_articles_fallback"] = True
+        if not status.get("message"):
+            status["message"] = (
+                "Filtered articles were empty, so this brief was built directly from fetched articles."
+            )
+        if not status.get("fallback_competitors"):
+            status["fallback_competitors"] = sorted(
+                {
+                    article.get("competitor", "Unknown competitor")
+                    for article in fresh_articles
+                    if article.get("competitor")
+                }
+            )
+
     brief_text = build_brief(articles, status)
     save_brief(brief_text)
 
