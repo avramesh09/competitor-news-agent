@@ -12,6 +12,10 @@ INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 
+
+class OpenAIQuotaExceeded(Exception):
+    pass
+
 CATEGORIES = [
     "product_launch",
     "feature_update",
@@ -113,11 +117,18 @@ def get_model_name():
 
 def is_quota_error(error):
     error_text = str(error).lower()
+    error_repr = repr(error).lower()
+    status_code = str(getattr(error, "status_code", "")).lower()
     return (
         "insufficient_quota" in error_text
+        or "insufficient_quota" in error_repr
         or "exceeded your current quota" in error_text
+        or "exceeded your current quota" in error_repr
         or "rate limit" in error_text
+        or "rate limit" in error_repr
         or "error code: 429" in error_text
+        or "error code: 429" in error_repr
+        or status_code == "429"
     )
 
 
@@ -142,7 +153,7 @@ def call_openai(client, model, batch):
         )
     except Exception as error:
         if is_quota_error(error):
-            raise
+            raise OpenAIQuotaExceeded(str(error))
         print(f"OpenAI request failed: {error}")
         sys.exit(1)
 
@@ -273,11 +284,7 @@ def main():
         try:
             response_data = call_openai(client, model, batch)
             filtered_articles.extend(normalize_kept_articles(batch, response_data))
-        except Exception as error:
-            if not is_quota_error(error):
-                print(f"OpenAI request failed: {error}")
-                sys.exit(1)
-
+        except OpenAIQuotaExceeded:
             quota_exhausted = True
             fallback_competitors.update(
                 article.get("competitor", "Unknown competitor") for article in batch
