@@ -9,4 +9,4 @@ else
   PYTHON_BIN="python3"
 fi
 
-"$PYTHON_BIN" src/run_daily.py >> output/daily_run.log 2>&1
+"$PYTHON_BIN" -u src/run_daily.py >> output/daily_run.log 2>&1

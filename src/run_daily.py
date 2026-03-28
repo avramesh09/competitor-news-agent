@@ -1,5 +1,7 @@
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -14,15 +16,22 @@ SCRIPTS = [
 
 
 def run_step(step_name, script_path):
-    print(f"\n=== {step_name} ===")
+    print(f"\n=== {step_name} ===", flush=True)
+    started_at = time.time()
+    child_env = os.environ.copy()
+    child_env["PYTHONUNBUFFERED"] = "1"
 
     result = subprocess.run(
-        [sys.executable, str(BASE_DIR / script_path)],
+        [sys.executable, "-u", str(BASE_DIR / script_path)],
         cwd=BASE_DIR,
+        env=child_env,
     )
 
+    elapsed_seconds = round(time.time() - started_at, 1)
+    print(f"Finished {step_name} in {elapsed_seconds} seconds", flush=True)
+
     if result.returncode != 0:
-        print(f"\nStopped because this step failed: {step_name}")
+        print(f"\nStopped because this step failed: {step_name}", flush=True)
         sys.exit(result.returncode)
 
 
@@ -30,7 +39,7 @@ def main():
     for step_name, script_path in SCRIPTS:
         run_step(step_name, script_path)
 
-    print("\nDaily competitor news run completed successfully.")
+    print("\nDaily competitor news run completed successfully.", flush=True)
 
 
 if __name__ == "__main__":
