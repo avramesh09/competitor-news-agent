@@ -4,6 +4,8 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote_plus
+from xml.etree import ElementTree
 
 import requests
 from dotenv import load_dotenv
@@ -14,6 +16,7 @@ CONFIG_PATH = BASE_DIR / "config" / "competitors.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_articles.json"
 LAST_SUCCESSFUL_PATH = BASE_DIR / "data" / "last_successful_articles.json"
 NEWS_API_URL = "https://newsapi.org/v2/everything"
+GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
 
 
 class NewsApiQuotaReached(Exception):
@@ -128,6 +131,42 @@ def fetch_news(query, api_key, from_time, to_time, max_articles):
     return []
 
 
+def build_google_news_rss_url(query):
+    encoded_query = quote_plus(query)
+    return (
+        f"{GOOGLE_NEWS_RSS_URL}?q={encoded_query}"
+        "&hl=en-US&gl=US&ceid=US:en"
+    )
+
+
+def fetch_google_news_rss(query, max_articles):
+    response = requests.get(build_google_news_rss_url(query), timeout=30)
+    response.raise_for_status()
+
+    root = ElementTree.fromstring(response.text)
+    channel = root.find("channel")
+    if channel is None:
+        return []
+
+    articles = []
+    for item in channel.findall("item")[:max_articles]:
+        source_node = item.find("source")
+        articles.append(
+            {
+                "title": (item.findtext("title") or "").strip(),
+                "url": (item.findtext("link") or "").strip(),
+                "publishedAt": (item.findtext("pubDate") or "").strip(),
+                "source": {
+                    "name": (source_node.text or "Google News RSS").strip()
+                    if source_node is not None
+                    else "Google News RSS"
+                },
+            }
+        )
+
+    return articles
+
+
 def format_article(article, competitor_name, source_type):
     return {
         "competitor": competitor_name,
@@ -147,7 +186,14 @@ def add_articles(results, seen_urls, articles, competitor_name):
             results.append(formatted)
 
 
-def fetch_articles_for_competitor(competitor, api_key, from_time, to_time, max_articles):
+def fetch_articles_for_competitor(
+    competitor,
+    api_key,
+    from_time,
+    to_time,
+    max_articles,
+    allow_rss_fallback=True,
+):
     competitor_name = competitor.get("name", "Unknown competitor")
     query = build_query(competitor)
     if not query:
@@ -156,8 +202,19 @@ def fetch_articles_for_competitor(competitor, api_key, from_time, to_time, max_a
     seen_urls = set()
     results = []
 
-    general_articles = fetch_news(query, api_key, from_time, to_time, max_articles)
-    add_articles(results, seen_urls, general_articles, competitor_name)
+    try:
+        general_articles = fetch_news(query, api_key, from_time, to_time, max_articles)
+        add_articles(results, seen_urls, general_articles, competitor_name)
+    except NewsApiQuotaReached:
+        if not allow_rss_fallback:
+            raise
+        print(f"NewsAPI was unavailable for {competitor_name}. Trying Google News RSS fallback.")
+
+    if not results and allow_rss_fallback:
+        rss_articles = fetch_google_news_rss(query, max_articles)
+        add_articles(results, seen_urls, rss_articles, competitor_name)
+        if results:
+            print(f"Used Google News RSS fallback for: {competitor_name}")
 
     return results
 
@@ -218,6 +275,7 @@ def main():
                 from_time,
                 to_time,
                 max_articles,
+                allow_rss_fallback=True,
             )
         except NewsApiQuotaReached:
             print("Stopped early because NewsAPI reported that the quota or rate limit was reached.")

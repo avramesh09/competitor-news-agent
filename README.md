@@ -40,6 +40,9 @@ That tells the script to fetch the most recent 24-hour window that NewsAPI can a
 To avoid burning through the free NewsAPI quota, set `NEWS_API_DAILY_REQUEST_BUDGET=25`.
 The script will stop early once it reaches that limit and still save the articles it already found.
 
+The fetch step now also has a Google News RSS fallback for every competitor.
+That means if NewsAPI returns nothing or hits quota, the script will try Google News RSS for that competitor.
+
 ## Freshness step
 
 The script `src/dedupe.py` will:
