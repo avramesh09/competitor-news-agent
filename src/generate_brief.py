@@ -38,8 +38,7 @@ def extract_competitors(config):
 
 def load_articles():
     if not INPUT_PATH.exists():
-        print("Missing output/filtered_articles.json. Run python3 src/filter_with_openai.py first.")
-        sys.exit(1)
+        return []
 
     with INPUT_PATH.open("r", encoding="utf-8") as file:
         return json.load(file)
@@ -232,34 +231,68 @@ def set_fallback_status(status, source_message, articles):
         )
 
 
-def choose_brief_articles(filtered_articles, fresh_articles, latest_articles, last_successful_articles, status):
-    if filtered_articles:
-        return filtered_articles, "filtered"
+def choose_brief_articles(competitors, filtered_articles, fresh_articles, latest_articles, last_successful_articles, status):
+    normalized_sources = {
+        "filtered": filtered_articles,
+        "fresh": normalize_fresh_articles(fresh_articles),
+        "latest": normalize_fresh_articles(latest_articles),
+        "last_successful": normalize_fresh_articles(last_successful_articles),
+    }
+    grouped_sources = {
+        source_name: group_by_competitor(source_articles)
+        for source_name, source_articles in normalized_sources.items()
+    }
 
-    if fresh_articles:
-        set_fallback_status(
-            status,
-            "Filtered articles were empty, so this brief was built directly from fetched articles.",
-            fresh_articles,
-        )
-        return normalize_fresh_articles(fresh_articles), "fresh"
+    selected_articles = []
+    source_names_used = []
+    fallback_competitors = set(status.get("fallback_competitors", []))
 
-    if latest_articles:
-        set_fallback_status(
-            status,
-            "Fresh articles were empty, so this brief was built from the latest fetched articles, including previously seen items.",
-            latest_articles,
-        )
-        return normalize_fresh_articles(latest_articles), "latest"
+    for competitor in competitors:
+        competitor_name = competitor.get("name", "Unknown competitor")
 
-    if last_successful_articles:
-        set_fallback_status(
-            status,
-            "This run fetched no usable articles, so this brief was built from the last successful fetched article snapshot.",
-            last_successful_articles,
-        )
-        return normalize_fresh_articles(last_successful_articles), "last_successful"
+        for source_name in ["filtered", "fresh", "latest", "last_successful"]:
+            competitor_articles = grouped_sources[source_name].get(competitor_name, [])
+            if not competitor_articles:
+                continue
 
+            selected_articles.extend(competitor_articles)
+            source_names_used.append(source_name)
+
+            if source_name != "filtered":
+                fallback_competitors.add(competitor_name)
+            break
+
+    unique_sources_used = sorted(set(source_names_used))
+
+    if any(source_name != "filtered" for source_name in unique_sources_used):
+        status["used_raw_articles_fallback"] = True
+        status["fallback_competitors"] = sorted(fallback_competitors)
+
+        if not status.get("message"):
+            if "filtered" in unique_sources_used:
+                status["message"] = (
+                    "This brief combines OpenAI-filtered results with fetched article fallbacks "
+                    "for competitors that had no filtered updates."
+                )
+            elif "fresh" in unique_sources_used:
+                status["message"] = (
+                    "Filtered articles were empty, so this brief was built directly from fetched articles."
+                )
+            elif "latest" in unique_sources_used:
+                status["message"] = (
+                    "Fresh articles were empty, so this brief was built from the latest fetched articles, "
+                    "including previously seen items."
+                )
+            elif "last_successful" in unique_sources_used:
+                status["message"] = (
+                    "This run fetched no usable articles, so this brief was built from the last successful "
+                    "fetched article snapshot."
+                )
+
+    if len(unique_sources_used) > 1:
+        return selected_articles, "combined"
+    if unique_sources_used:
+        return selected_articles, unique_sources_used[0]
     return [], "none"
 
 
@@ -347,6 +380,7 @@ def main():
     latest_articles = load_latest_articles()
     last_successful_articles = load_last_successful_articles()
     articles, source_used = choose_brief_articles(
+        competitors,
         filtered_articles,
         fresh_articles,
         latest_articles,
