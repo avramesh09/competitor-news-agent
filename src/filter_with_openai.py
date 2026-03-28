@@ -16,6 +16,10 @@ STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 class OpenAIQuotaExceeded(Exception):
     pass
 
+
+class OpenAIFallbackRequired(Exception):
+    pass
+
 CATEGORIES = [
     "product_launch",
     "feature_update",
@@ -102,8 +106,9 @@ def build_prompt(batch):
 def get_openai_client():
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key or api_key == "your_openai_api_key":
-        print("Missing OPENAI_API_KEY. Add your real OpenAI key to .env.")
-        sys.exit(1)
+        raise OpenAIFallbackRequired(
+            "Missing OPENAI_API_KEY. Continuing with fallback summaries."
+        )
 
     return OpenAI(api_key=api_key)
 
@@ -154,20 +159,18 @@ def call_openai(client, model, batch):
     except Exception as error:
         if is_quota_error(error):
             raise OpenAIQuotaExceeded(str(error))
-        print(f"OpenAI request failed: {error}")
-        sys.exit(1)
+        raise OpenAIFallbackRequired(f"OpenAI request failed: {error}")
 
     output_text = (response.output_text or "").strip()
     if not output_text:
-        print("OpenAI returned an empty response.")
-        sys.exit(1)
+        raise OpenAIFallbackRequired("OpenAI returned an empty response.")
 
     try:
         return json.loads(output_text)
     except json.JSONDecodeError:
-        print("OpenAI returned invalid JSON.")
-        print(output_text[:1000])
-        sys.exit(1)
+        raise OpenAIFallbackRequired(
+            f"OpenAI returned invalid JSON. Response preview: {output_text[:1000]}"
+        )
 
 
 def normalize_kept_articles(batch, response_data):
@@ -264,17 +267,25 @@ def main():
         print(f"Saved 0 filtered articles to {OUTPUT_PATH}")
         return
 
-    client = get_openai_client()
+    client = None
     model = get_model_name()
+    fallback_message = ""
+
+    try:
+        client = get_openai_client()
+    except OpenAIFallbackRequired as error:
+        fallback_message = str(error)
+
     batches = split_into_batches(articles, batch_size=8)
 
     filtered_articles = []
     quota_exhausted = False
+    fallback_used = bool(fallback_message)
     fallback_competitors = set()
 
     for index, batch in enumerate(batches, start=1):
         print(f"Filtering batch {index} of {len(batches)}")
-        if quota_exhausted:
+        if quota_exhausted or client is None:
             filtered_articles.extend(fallback_filter_batch(batch))
             fallback_competitors.update(
                 article.get("competitor", "Unknown competitor") for article in batch
@@ -286,23 +297,37 @@ def main():
             filtered_articles.extend(normalize_kept_articles(batch, response_data))
         except OpenAIQuotaExceeded:
             quota_exhausted = True
+            fallback_used = True
             fallback_competitors.update(
                 article.get("competitor", "Unknown competitor") for article in batch
             )
             filtered_articles.extend(fallback_filter_batch(batch))
             print("OpenAI quota was exhausted. Continuing with fallback summaries.")
+            fallback_message = (
+                "OpenAI quota was exhausted during this run. "
+                "The brief below includes fallback headline-based summaries for the affected competitors."
+            )
+        except OpenAIFallbackRequired as error:
+            fallback_used = True
+            fallback_competitors.update(
+                article.get("competitor", "Unknown competitor") for article in batch
+            )
+            filtered_articles.extend(fallback_filter_batch(batch))
+            print(str(error))
+            print("Continuing with fallback summaries.")
+            if not fallback_message:
+                fallback_message = (
+                    "OpenAI filtering failed during this run. "
+                    "The brief below includes fallback headline-based summaries for the affected competitors."
+                )
 
     save_articles(filtered_articles)
     save_status(
         {
             "openai_quota_exhausted": quota_exhausted,
+            "fallback_used": fallback_used,
             "fallback_competitors": sorted(name for name in fallback_competitors if name),
-            "message": (
-                "OpenAI quota was exhausted during this run. "
-                "The brief below includes fallback headline-based summaries for the affected competitors."
-                if quota_exhausted
-                else ""
-            ),
+            "message": fallback_message,
         }
     )
     print(f"Loaded {len(articles)} fresh articles")

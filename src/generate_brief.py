@@ -25,6 +25,7 @@ def load_filter_status():
     if not STATUS_PATH.exists():
         return {
             "openai_quota_exhausted": False,
+            "fallback_used": False,
             "fallback_competitors": [],
             "message": "",
         }
@@ -93,7 +94,7 @@ def build_why_this_matters(articles):
 
 
 def build_quota_warning(status):
-    if not status.get("openai_quota_exhausted"):
+    if not status.get("openai_quota_exhausted") and not status.get("fallback_used"):
         return []
 
     competitors = status.get("fallback_competitors", [])
