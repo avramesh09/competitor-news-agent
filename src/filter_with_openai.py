@@ -98,29 +98,46 @@ def get_openai_client():
 
 
 def get_model_name():
-    return os.getenv("OPENAI_MODEL", "gpt-5-mini")
+    model_name = os.getenv("OPENAI_MODEL", "").strip()
+    if model_name:
+        return model_name
+    return "gpt-5-mini"
 
 
 def call_openai(client, model, batch):
-    response = client.responses.create(
-        model=model,
-        input=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a careful competitor news analyst. "
-                    "You must respond with JSON only."
-                ),
-            },
-            {
-                "role": "user",
-                "content": build_prompt(batch),
-            },
-        ],
-        text={"format": {"type": "json_object"}},
-    )
+    try:
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a careful competitor news analyst. "
+                        "You must respond with JSON only."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": build_prompt(batch),
+                },
+            ],
+            text={"format": {"type": "json_object"}},
+        )
+    except Exception as error:
+        print(f"OpenAI request failed: {error}")
+        sys.exit(1)
 
-    return json.loads(response.output_text)
+    output_text = (response.output_text or "").strip()
+    if not output_text:
+        print("OpenAI returned an empty response.")
+        sys.exit(1)
+
+    try:
+        return json.loads(output_text)
+    except json.JSONDecodeError:
+        print("OpenAI returned invalid JSON.")
+        print(output_text[:1000])
+        sys.exit(1)
 
 
 def normalize_kept_articles(batch, response_data):
