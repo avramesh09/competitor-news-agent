@@ -8,6 +8,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 FRESH_INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
+LATEST_INPUT_PATH = BASE_DIR / "output" / "latest_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "latest_brief.md"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
 MAX_BULLETS = 8
@@ -27,6 +28,14 @@ def load_fresh_articles():
         return []
 
     with FRESH_INPUT_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_latest_articles():
+    if not LATEST_INPUT_PATH.exists():
+        return []
+
+    with LATEST_INPUT_PATH.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -200,6 +209,7 @@ def main():
     articles = load_articles()
     status = load_filter_status()
     fresh_articles = load_fresh_articles()
+    latest_articles = load_latest_articles()
 
     if not articles and fresh_articles:
         articles = normalize_fresh_articles(fresh_articles)
@@ -213,6 +223,22 @@ def main():
                 {
                     article.get("competitor", "Unknown competitor")
                     for article in fresh_articles
+                    if article.get("competitor")
+                }
+            )
+
+    if not articles and latest_articles:
+        articles = normalize_fresh_articles(latest_articles)
+        status["used_raw_articles_fallback"] = True
+        if not status.get("message"):
+            status["message"] = (
+                "Fresh articles were empty, so this brief was built from the latest fetched articles, including previously seen items."
+            )
+        if not status.get("fallback_competitors"):
+            status["fallback_competitors"] = sorted(
+                {
+                    article.get("competitor", "Unknown competitor")
+                    for article in latest_articles
                     if article.get("competitor")
                 }
             )
