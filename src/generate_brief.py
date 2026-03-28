@@ -125,6 +125,43 @@ def normalize_fresh_articles(fresh_articles):
     return normalized
 
 
+def set_fallback_status(status, source_message, articles):
+    status["used_raw_articles_fallback"] = True
+    if not status.get("message"):
+        status["message"] = source_message
+    if not status.get("fallback_competitors"):
+        status["fallback_competitors"] = sorted(
+            {
+                article.get("competitor", "Unknown competitor")
+                for article in articles
+                if article.get("competitor")
+            }
+        )
+
+
+def choose_brief_articles(filtered_articles, fresh_articles, latest_articles, status):
+    if filtered_articles:
+        return filtered_articles, "filtered"
+
+    if fresh_articles:
+        set_fallback_status(
+            status,
+            "Filtered articles were empty, so this brief was built directly from fetched articles.",
+            fresh_articles,
+        )
+        return normalize_fresh_articles(fresh_articles), "fresh"
+
+    if latest_articles:
+        set_fallback_status(
+            status,
+            "Fresh articles were empty, so this brief was built from the latest fetched articles, including previously seen items.",
+            latest_articles,
+        )
+        return normalize_fresh_articles(latest_articles), "latest"
+
+    return [], "none"
+
+
 def build_why_this_matters(articles):
     if not articles:
         return "No important competitor updates were found in the last 24 hours."
@@ -206,48 +243,28 @@ def save_brief(brief_text):
 
 
 def main():
-    articles = load_articles()
+    filtered_articles = load_articles()
     status = load_filter_status()
     fresh_articles = load_fresh_articles()
     latest_articles = load_latest_articles()
-
-    if not articles and fresh_articles:
-        articles = normalize_fresh_articles(fresh_articles)
-        status["used_raw_articles_fallback"] = True
-        if not status.get("message"):
-            status["message"] = (
-                "Filtered articles were empty, so this brief was built directly from fetched articles."
-            )
-        if not status.get("fallback_competitors"):
-            status["fallback_competitors"] = sorted(
-                {
-                    article.get("competitor", "Unknown competitor")
-                    for article in fresh_articles
-                    if article.get("competitor")
-                }
-            )
-
-    if not articles and latest_articles:
-        articles = normalize_fresh_articles(latest_articles)
-        status["used_raw_articles_fallback"] = True
-        if not status.get("message"):
-            status["message"] = (
-                "Fresh articles were empty, so this brief was built from the latest fetched articles, including previously seen items."
-            )
-        if not status.get("fallback_competitors"):
-            status["fallback_competitors"] = sorted(
-                {
-                    article.get("competitor", "Unknown competitor")
-                    for article in latest_articles
-                    if article.get("competitor")
-                }
-            )
+    articles, source_used = choose_brief_articles(
+        filtered_articles,
+        fresh_articles,
+        latest_articles,
+        status,
+    )
 
     brief_text = build_brief(articles, status)
     save_brief(brief_text)
 
     selected_count = min(len(articles), MAX_BULLETS)
-    print(f"Loaded {len(articles)} filtered articles")
+    print(
+        "Article counts for brief:"
+        f" filtered={len(filtered_articles)},"
+        f" fresh={len(fresh_articles)},"
+        f" latest={len(latest_articles)}"
+    )
+    print(f"Using article source: {source_used}")
     print(f"Selected up to {selected_count} items for the brief")
     print(f"Saved brief to {OUTPUT_PATH}")
 
