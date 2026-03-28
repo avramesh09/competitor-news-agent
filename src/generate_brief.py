@@ -102,8 +102,12 @@ def select_top_articles(articles):
 def group_by_competitor(articles):
     grouped = defaultdict(list)
     for article in articles:
-        grouped[article.get("competitor", "Unknown competitor")].append(article)
+        grouped[normalize_competitor_name(article.get("competitor", "Unknown competitor"))].append(article)
     return dict(grouped)
+
+
+def normalize_competitor_name(name):
+    return " ".join(str(name).lower().split())
 
 
 def format_article_line(article):
@@ -155,7 +159,9 @@ def build_competitor_table(competitors, articles):
 
     for competitor in competitors:
         competitor_name = competitor.get("name", "Unknown competitor")
-        competitor_articles = sort_articles(grouped_articles.get(competitor_name, []))
+        competitor_articles = sort_articles(
+            grouped_articles.get(normalize_competitor_name(competitor_name), [])
+        )
 
         if not competitor_articles:
             lines.append(f"| {competitor_name} | No Update | - | - |")
@@ -217,6 +223,52 @@ def normalize_fresh_articles(fresh_articles):
     return normalized
 
 
+def article_lookup_key(article):
+    url = article.get("url", "").strip()
+    if url:
+        return f"url:{url}"
+
+    competitor = normalize_competitor_name(article.get("competitor", ""))
+    title = " ".join(article.get("title", "").lower().split())
+    return f"title:{competitor}:{title}"
+
+
+def build_filtered_lookup(filtered_articles):
+    lookup = {}
+    for article in filtered_articles:
+        lookup[article_lookup_key(article)] = article
+    return lookup
+
+
+def normalize_raw_article(article, filtered_lookup):
+    normalized_article = {
+        "competitor": article.get("competitor", ""),
+        "title": article.get("title", "").strip(),
+        "url": article.get("url", ""),
+        "date": article.get("date", ""),
+        "category": "official_update" if article.get("source_type", "") == "official" else "other",
+        "summary": "",
+        "importance": 3 if article.get("source_type", "") == "official" else 2,
+    }
+
+    filtered_match = filtered_lookup.get(article_lookup_key(article))
+    if filtered_match:
+        normalized_article["category"] = filtered_match.get("category", normalized_article["category"])
+        normalized_article["summary"] = filtered_match.get("summary", "").strip()
+        normalized_article["importance"] = int(filtered_match.get("importance", normalized_article["importance"]))
+        return normalized_article
+
+    source = article.get("source", "").strip()
+    title = normalized_article["title"]
+    summary = "Fallback summary from fetched article"
+    if source:
+        summary += f" via {source}"
+    if title:
+        summary += f". Headline: {title}"
+    normalized_article["summary"] = summary
+    return normalized_article
+
+
 def set_fallback_status(status, source_message, articles):
     status["used_raw_articles_fallback"] = True
     if not status.get("message"):
@@ -232,11 +284,12 @@ def set_fallback_status(status, source_message, articles):
 
 
 def choose_brief_articles(competitors, filtered_articles, fresh_articles, latest_articles, last_successful_articles, status):
+    filtered_lookup = build_filtered_lookup(filtered_articles)
     normalized_sources = {
+        "latest": [normalize_raw_article(article, filtered_lookup) for article in latest_articles],
+        "fresh": [normalize_raw_article(article, filtered_lookup) for article in fresh_articles],
         "filtered": filtered_articles,
-        "fresh": normalize_fresh_articles(fresh_articles),
-        "latest": normalize_fresh_articles(latest_articles),
-        "last_successful": normalize_fresh_articles(last_successful_articles),
+        "last_successful": [normalize_raw_article(article, filtered_lookup) for article in last_successful_articles],
     }
     grouped_sources = {
         source_name: group_by_competitor(source_articles)
@@ -249,9 +302,10 @@ def choose_brief_articles(competitors, filtered_articles, fresh_articles, latest
 
     for competitor in competitors:
         competitor_name = competitor.get("name", "Unknown competitor")
+        competitor_key = normalize_competitor_name(competitor_name)
 
-        for source_name in ["filtered", "fresh", "latest", "last_successful"]:
-            competitor_articles = grouped_sources[source_name].get(competitor_name, [])
+        for source_name in ["latest", "fresh", "filtered", "last_successful"]:
+            competitor_articles = grouped_sources[source_name].get(competitor_key, [])
             if not competitor_articles:
                 continue
 
