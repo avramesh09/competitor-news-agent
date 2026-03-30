@@ -56,15 +56,18 @@ def get_daily_request_budget():
 
 
 def extract_competitors(config):
+    def filter_enabled(items):
+        return [item for item in items if item.get("enabled", True)]
+
     competitors = config.get("competitors", [])
 
     if isinstance(competitors, list):
-        return competitors
+        return filter_enabled(competitors)
 
     if isinstance(competitors, dict):
         all_competitors = []
         for group_name in ["tier_1_direct", "tier_2_adjacent"]:
-            all_competitors.extend(competitors.get(group_name, []))
+            all_competitors.extend(filter_enabled(competitors.get(group_name, [])))
         return all_competitors
 
     return []

@@ -21,98 +21,112 @@
         "aliases": ["Palo Alto", "Prisma SASE", "Prisma Access"],
         "category": "security_first_sase",
         "official_domains": ["paloaltonetworks.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Zscaler",
         "aliases": ["Zscaler", "ZIA", "ZPA"],
         "category": "security_first_sase",
         "official_domains": ["zscaler.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Netskope",
         "aliases": ["Netskope"],
         "category": "security_first_sase",
         "official_domains": ["netskope.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Fortinet",
         "aliases": ["Fortinet", "FortiSASE", "FortiGate", "FortiWAN"],
         "category": "security_first_sase",
         "official_domains": ["fortinet.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Check Point",
         "aliases": ["Check Point", "Check Point Software", "Harmony SASE"],
         "category": "security_first_sase",
         "official_domains": ["checkpoint.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "VMware",
         "aliases": ["VMware", "VMware SD-WAN", "VeloCloud"],
         "category": "networking_first_sase",
         "official_domains": ["vmware.com", "velocloud.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Juniper Networks",
         "aliases": ["Juniper", "Juniper Mist", "Mist AI", "Juniper Secure Edge"],
         "category": "networking_first_sase",
         "official_domains": ["juniper.net"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "HPE Aruba Networking",
         "aliases": ["Aruba", "HPE Aruba", "Aruba Networking"],
         "category": "networking_first_sase",
         "official_domains": ["arubanetworks.com", "hpe.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Arista Networks",
         "aliases": ["Arista"],
         "category": "networking_first_adjacent",
         "official_domains": ["arista.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": false
       },
       {
         "name": "Extreme Networks",
         "aliases": ["Extreme", "Extreme Networks"],
         "category": "networking_first_adjacent",
         "official_domains": ["extremenetworks.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": false
       },
       {
         "name": "Cato Networks",
         "aliases": ["Cato", "Cato Networks"],
         "category": "cloud_native_sase",
         "official_domains": ["catonetworks.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Cloudflare",
         "aliases": ["Cloudflare", "Cloudflare Zero Trust", "Cloudflare One"],
         "category": "cloud_native_sase",
         "official_domains": ["cloudflare.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": true
       },
       {
         "name": "Akamai",
         "aliases": ["Akamai", "Enterprise Application Access", "EAA"],
         "category": "cloud_native_sase",
         "official_domains": ["akamai.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": false
       },
       {
         "name": "Twingate",
         "aliases": ["Twingate"],
         "category": "cloud_native_zero_trust",
         "official_domains": ["twingate.com"],
-        "priority": 1
+        "priority": 1,
+        "enabled": false
       }
     ],
     "tier_2_adjacent": [
@@ -121,63 +135,72 @@
         "aliases": ["Versa", "Versa Networks"],
         "category": "sase_sdwan",
         "official_domains": ["versa-networks.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Aryaka",
         "aliases": ["Aryaka"],
         "category": "managed_sase_wan",
         "official_domains": ["aryaka.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Riverbed",
         "aliases": ["Riverbed"],
         "category": "wan_performance",
         "official_domains": ["riverbed.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Cradlepoint",
         "aliases": ["Cradlepoint"],
         "category": "wireless_wan",
         "official_domains": ["cradlepoint.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Bigleaf Networks",
         "aliases": ["Bigleaf", "Bigleaf Networks"],
         "category": "wan_optimization",
         "official_domains": ["bigleaf.net"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Forcepoint",
         "aliases": ["Forcepoint"],
         "category": "security_adjacent",
         "official_domains": ["forcepoint.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "iboss",
         "aliases": ["iboss"],
         "category": "security_adjacent",
         "official_domains": ["iboss.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Lookout",
         "aliases": ["Lookout"],
         "category": "security_adjacent",
         "official_domains": ["lookout.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       },
       {
         "name": "Broadcom",
         "aliases": ["Broadcom", "Symantec Enterprise", "Symantec"],
         "category": "security_adjacent",
         "official_domains": ["broadcom.com"],
-        "priority": 2
+        "priority": 2,
+        "enabled": false
       }
     ]
   },

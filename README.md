@@ -25,6 +25,7 @@ Each competitor has:
 
 - `name`: the company name
 - `keywords`: extra search words that help find relevant news
+- `enabled`: set to `true` to include that competitor in fetch and briefing, or `false` to keep it in the config but skip execution
 
 ## First fetch test
 
