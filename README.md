@@ -61,6 +61,13 @@ The script `src/filter_with_openai.py` will:
 - add `category`, `summary`, and `importance`
 - save the cleaned result to `output/filtered_articles.json`
 
+To control OpenAI usage, the filter step also supports:
+
+- `OPENAI_MAX_ARTICLES=40`
+- `OPENAI_MAX_ARTICLES_PER_COMPETITOR=2`
+
+That keeps very large fetches from sending too many articles to OpenAI in a single run.
+
 ## Brief step
 
 The script `src/generate_brief.py` will:
@@ -118,7 +125,7 @@ Important timezone note:
 
 - GitHub Actions schedules use UTC, not your local timezone
 - the workflow is currently set to `0 15 * * *`
-- on March 27, 2026 in Los Angeles, that means 8:00 AM PDT
+- on March 29, 2026 in Los Angeles, that means 8:00 AM PDT
 - after the fall time change, the same schedule will run at 7:00 AM PST
 
 GitHub Secrets you need to add:

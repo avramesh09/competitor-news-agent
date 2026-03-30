@@ -11,6 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT_PATH = BASE_DIR / "output" / "fresh_articles.json"
 OUTPUT_PATH = BASE_DIR / "output" / "filtered_articles.json"
 STATUS_PATH = BASE_DIR / "output" / "filter_status.json"
+BATCH_SIZE = 8
 
 
 class OpenAIQuotaExceeded(Exception):
@@ -55,6 +56,40 @@ def split_into_batches(items, batch_size):
     for start in range(0, len(items), batch_size):
         batches.append(items[start : start + batch_size])
     return batches
+
+
+def get_openai_limits():
+    raw_max_total = os.getenv("OPENAI_MAX_ARTICLES", "40").strip()
+    raw_max_per_competitor = os.getenv("OPENAI_MAX_ARTICLES_PER_COMPETITOR", "2").strip()
+
+    try:
+        max_total = max(1, int(raw_max_total))
+        max_per_competitor = max(1, int(raw_max_per_competitor))
+    except ValueError:
+        print("OPENAI_MAX_ARTICLES and OPENAI_MAX_ARTICLES_PER_COMPETITOR must be whole numbers")
+        sys.exit(1)
+
+    return max_total, max_per_competitor
+
+
+def limit_articles_for_openai(articles, max_total, max_per_competitor):
+    selected_articles = []
+    per_competitor_counts = {}
+
+    for article in articles:
+        competitor = article.get("competitor", "Unknown competitor")
+        competitor_count = per_competitor_counts.get(competitor, 0)
+
+        if competitor_count >= max_per_competitor:
+            continue
+
+        selected_articles.append(article)
+        per_competitor_counts[competitor] = competitor_count + 1
+
+        if len(selected_articles) >= max_total:
+            break
+
+    return selected_articles
 
 
 def build_prompt(batch):
@@ -253,6 +288,7 @@ def save_articles(articles):
 def main():
     load_dotenv()
     articles = load_articles()
+    max_total, max_per_competitor = get_openai_limits()
 
     if not articles:
         save_articles([])
@@ -267,6 +303,14 @@ def main():
         print(f"Saved 0 filtered articles to {OUTPUT_PATH}")
         return
 
+    limited_articles = limit_articles_for_openai(articles, max_total, max_per_competitor)
+    if len(limited_articles) < len(articles):
+        print(
+            f"Reduced OpenAI input from {len(articles)} to {len(limited_articles)} articles "
+            f"using max_total={max_total} and max_per_competitor={max_per_competitor}"
+        )
+    articles = limited_articles
+
     client = None
     model = get_model_name()
     fallback_message = ""
@@ -276,7 +320,7 @@ def main():
     except OpenAIFallbackRequired as error:
         fallback_message = str(error)
 
-    batches = split_into_batches(articles, batch_size=8)
+    batches = split_into_batches(articles, batch_size=BATCH_SIZE)
 
     filtered_articles = []
     quota_exhausted = False

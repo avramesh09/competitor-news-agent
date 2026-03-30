@@ -3,7 +3,7 @@ name: Daily Competitor Brief
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 15 * * *"
 
 concurrency:
   group: daily-competitor-brief
